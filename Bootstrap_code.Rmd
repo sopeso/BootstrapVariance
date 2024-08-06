@@ -1,0 +1,352 @@
+--- 
+title: <center>_**Intervalo de confiança bootstrap normal para a variância populacional**_</center>  
+author: Sophia Moares
+date: __Julho de 2021__
+output: 
+    html_document:
+      highlight: textmate
+      theme: flatly
+      number_sections: yes
+      toc: yes
+      toc_float:
+        collapsed: yes
+        smooth_scroll: no
+   
+---
+        
+<center>
+***
+![](https://www.ufmg.br/marca/ass6.jpg)
+
+***
+</center>
+
+<div align="justify">
+
+\
+
+# Introdução
+
+O método de Monte Carlo é amplamente utilizado em diversas áreas do conhecimento 
+e consiste, resumidamente, como um método de simulação estatística que utiliza 
+ sequências de números aleatórios para desenvolver simulações. Inicialmente ele foi
+desenvolvido em 1946 pelo matemático Stanislaw Ulam. Porém, foi formalizado 
+em um artigo no ano de 1949 como “Monte Carlo Method” e publicado por John 
+Von Neumann e Stanislav Ulam.
+ 
+Utilizando o método de Monte Carlo torna-se desnecessário escrever as equações 
+diferenciais que descrevem o comportamento de sistemas complexos. Entretanto
+faz-se necessário que o sistema físico ou matemático seja descrito, isto é, 
+modelado, como funções de densidade de distribuição de probabilidade (FDP). 
+A simulação de Monte Carlo pode ser realizada fazendo-se as amostragens aleatórias 
+a partir das devidas distribuições, após conhecida as mesmas. Este processo 
+é repetido inúmeras vezes e o resultado desejado é obtido por meio de técnicas 
+estatísticas sobre um determinado número de realizações amostrais que podem 
+chegar a milhões.
+
+Uma boa maneira de reamostrar qualquer conjunto de dados é criar replicas dos dados,
+podendo assim verificar e analisar a variabilidade sem usar cálculos analíticos. 
+Isto nada mais é que a ideia central de bootstrap, sendo possivel criar inúmeras pseudo-populações.  
+
+
+\
+
+```{r include=FALSE}
+#install.packages("EnvStats") 
+library(EnvStats)
+```
+
+\
+
+# Amostragem
+
+Inicialmente foi sintetizado duas amostras de tamanho **1000**. A primeira com distribuição normal padrão, isto é $\mu$ = **0** e $\sigma$ = **1** e a segunda amostra seguindo uma distribuição exponencial com parâmetro $\lambda$ = **1**
+
+
+## Distribuição Normal
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+situacao_normal<- function(n){
+  amostra_normal<- rnorm(n,0,1)
+  rep1<- replicate(1000,amostra_normal)
+  
+  return(rep1)
+}
+amostragem1_nomals <- situacao_normal(5)
+amostragem1_nomal<- as.data.frame(amostragem1_nomals)
+
+amostragem2_nomalx <- situacao_normal(30)
+amostragem2_nomal <-as.data.frame(amostragem2_nomalx)
+
+amostragem3_nomalr <- situacao_normal(100)
+amostragem3_nomal <-as.data.frame(amostragem3_nomalr)
+
+```
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+
+par(mfrow=c(2,2))
+hist(amostragem1_nomals,col=4, freq = T, ylab = "Frequência absoluta", main = "Distribuição normal, para n= 5",xlab= "n=5",xlim=c(-2,2))
+hist(amostragem2_nomalx,col= 4, freq = T, ylab = "Frequência absoluta", main = "Distribuição normal, para n= 30",xlab= "n=30",xlim=c(-2,2))
+hist(amostragem3_nomalr,col= 4, freq = T, ylab = "Frequência absoluta", main = "Distribuição normal, para n= 100",xlab= "n=100",xlim=c(-2,2))
+
+
+```
+
+
+
+
+
+## Exponencial
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+situacao_exp<- function(n){
+  amostra_exp<- rexp(n,1)
+  rep2<- replicate(1000,amostra_exp)
+  
+  return(rep2)
+}
+
+amostragem1_expx <- situacao_exp(5)
+amostragem1_exp<- as.data.frame(amostragem1_expx)
+
+amostragem2_expr <- situacao_exp(30)
+amostragem2_exp <-as.data.frame(amostragem2_expr)
+
+amostragem3_exps <- situacao_exp(100)
+amostragem3_exp <-as.data.frame(amostragem3_exps)
+
+```
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+par(mfrow=c(2,2))
+hist(amostragem1_expx,col="lightgreen", freq = T, ylab = "Frequência absoluta", main = "Distribuição exponencial, para n= 5",xlab= "n=5",xlim=c(0,2))
+hist(amostragem2_expr,col="lightgreen", freq = T, ylab = "Frequência absoluta", main = "Distribuição exponencial, para n= 30",xlab= "n=30",xlim=c(0,6))
+hist(amostragem3_exps,col= "lightgreen", freq = T, ylab = "Frequência absoluta", main = "Distribuição exponencial, para n= 100",xlab= "n=100",xlim=c(0,5))
+
+
+```
+
+Em ambas houve um processo de reamostragem para ser possível o desenvolvimento do trabalho. Como é possível observar acima, foram utilizados valores de n diferentes: 5, 30 e 100. Esses valores sendo comparados entre si podem avaliar o efeito do tamanho amostral. Repare que quando n é pequeno o suficiente não é possível inferir que distribuição provém a amostra, mesmo sabendo de onde ela é, como no caso de n igual a 5. Por outro lado quando n é um valor intermediário como 30 é possível fazer suposições sobre a possível distribuição, mas quando n é grande o suficiente fica claro de qual distribuição provém a amostra. No caso da normal, o histograma parece de modo simétrico e formato de sino enquanto a exponencial não é nada simétrica e há concentração dos dados no lado da origem. 
+
+\
+
+# Método Bootstrap
+
+## Distribuição Normal
+
+- **Estimador Pontual, Erro padrão e Intervalo de Confiança para Distribuição Normal**
+
+Usando os dados amostrais é possível encontrar um valor razoável para estimar o verdadeiro valor populacional do parâmetro variância, chamado estimador pontual, este é a variância amostral.
+
+A partir da amostra é possível calcular o erro padrão denotado por $\widehat{Ep}$ ($\hat{\theta}$) = $\surd{\hat{\theta}}$. 
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+fc1<- function(n){
+  amostragem_normal <- situacao_normal(n)
+  amostragem_normal <-as.data.frame(amostragem_normal)
+  
+  var_pontual <- as.vector(apply(amostragem_normal,2,var)) 
+  
+  erro<- c()
+  intervalo<- list()
+  
+  for(i in 1:n){
+    x<- amostragem_normal[[i]]
+    
+    var200<-list()
+    
+    #replicar 200 vezes um vetor de tamanho n
+    for(b in 1:200){
+      lista200<- sample(x, n, replace=T)
+      var200[[b]]<-lista200 
+    }
+    var200 <- mapply(var, var200) #estimador pontual da reamostragem de 200
+    erro[i]<-sqrt(sum(var200)) #erro padrao da reamostragem de 200
+    
+    limite_inferior<- (var_pontual[i]) - (1.96*erro[i])
+    limite_superior<- (var_pontual[i]) +(1.96*erro[i])
+    intervalo[[i]]<-(c(limite_inferior,limite_superior))
+  } 
+  lista= list(intervalo,erro,var_pontual[1]) #var_pontual é a estimativa pontual da amostra de 1000
+  return(lista)
+}
+n5=fc1(5)
+n5
+
+n30=fc1(30)
+n30
+
+n100=fc1(100)
+n100
+
+```
+
+
+### Proporção 
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+proporcao_normal<- function(lista,n){
+  varpontual = lista[[3]]
+  intervalos = lista[[1]]
+  proporcao<- c()
+  
+  for (i in 1:n){
+    grupo14 = c(intervalos[i])[[1]]
+    if (varpontual >= grupo14[1] & varpontual <= grupo14[2]){
+      proporcao[i] <- 1
+    }
+    else {proporcao[i]<-0}
+  }
+  return(mean(proporcao))
+}
+
+proporcao_normal(n5,5) 
+
+proporcao_normal(n30,30)
+
+proporcao_normal(n100,100)   ##significa que o processo de amostragem é muito bom
+
+```
+
+
+### Intervalo de confiança paramétrico
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+x<- rnorm(5,0,1)
+varTest(x, "two.sided", conf.level = 0.95)  
+
+y<- rnorm(30,0,1)
+varTest(x, "two.sided", conf.level = 0.95)  
+
+z<- rnorm(100,0,1)
+varTest(x, "two.sided", conf.level = 0.95)  
+```
+
+
+\
+
+## Distribuição Exponencial
+
+- **Estimador Pontual, Erro padrão e Intervalo de Confiança para Distribuição Normal**
+
+## Estimador pontual- Para distribuição Exponencial
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+fc2<- function(n){
+  amostragem_exp <- situacao_exp(n)
+  amostragem_exp <-as.data.frame(amostragem_exp)
+  
+  var_pontual <- as.vector(apply(amostragem_exp,2,var)) 
+  
+  erro<- c()
+  intervalo<- list()
+  
+  for(i in 1:n){
+    y <- amostragem_exp[[i]]
+    
+    var200<-list()
+    
+    #replicar 200 vezes um vetor de tamanho n
+    for(b in 1:200){
+      lista200<- sample(y, n, replace=T)
+      var200[[b]]<-lista200 
+    }
+    var200 <- mapply(var, var200) #estimador pontual da reamostragem de 200
+    erro[i]<-sqrt(sum(var200)) #erro padrao da reamostragem de 200
+    
+    limite_inferior<- (var_pontual[i]) - (1.96*erro[i])
+    limite_superior<- (var_pontual[i]) +(1.96*erro[i])
+    intervalo[[i]]<-(c(limite_inferior,limite_superior))
+  } 
+  lista= list(intervalo,erro,var_pontual[1]) #var_pontual é a estimativa pontual da amostra de 1000
+  return(lista)
+}
+
+n_e5=fc2(5)
+n5
+
+n_e30=fc2(30)
+n30
+
+n_e100=fc2(100)
+n100
+
+```
+
+
+### Proporção
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+proporcao_exp<- function(lista,n){
+  varpontual = lista[[3]]
+  intervalos = lista[[1]]
+  proporcao<- c()
+  
+  for (i in 1:n){
+    grupo14 = c(intervalos[i])[[1]]
+    if (varpontual >= grupo14[1] & varpontual <= grupo14[2]){
+      proporcao[i] <- 1
+    }
+    else {proporcao[i]<-0}
+  }
+  return(mean(proporcao))
+}
+
+proporcao_exp(n_e5,5) 
+
+proporcao_exp(n_e30,30)
+
+proporcao_exp(n_e100,100)   
+```
+
+
+
+
+### Intervalo de confiança parametrico
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+f<- rexp(5,1)
+varTest(y, "two.sided", conf.level = 0.95)  
+
+y<- rexp(30,1)
+varTest(y, "two.sided", conf.level = 0.95)  
+
+z<- rexp(100,1)
+varTest(y, "two.sided", conf.level = 0.95)  
+
+```
+
+# Referências 
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
+[Site rdocumentation](https://www.rdocumentation.org/packages/vcdExtra/versions/0.7-5/topics/ICU)
+
+
